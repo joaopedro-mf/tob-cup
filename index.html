@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Süper Mario Kart Web</title>
+<style>
+  html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
+  #wrap { position:relative; width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  #hint {
+    position:absolute; bottom:6px; right:10px; color:#fff; opacity:.45;
+    font:12px monospace; pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="512" height="448"></canvas></div>
+<div id="hint">&larr;&rarr;转向 · X/W/&uarr;油门(菜单=上) · Z/S/&darr;刹车(菜单=下) · C漂移 · E道具前掷 Q道具后放 · Enter确认 Esc暂停</div>
+<script src="js/circuit_img.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/mode7.js"></script>
+<script src="js/map.js"></script>
+<script src="js/animator.js"></script>
+<script src="js/circuit_txt.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/driver.js"></script>
+<script src="js/items.js"></script>
+<script src="js/gui.js"></script>
+<script src="js/trackgen.js"></script>
+<script src="js/states.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
+
+
