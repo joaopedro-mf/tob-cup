@@ -36,11 +36,11 @@ const CUPS = [
     tracks: ['choco_island_1','ghost_valley_2','donut_plains_2','bowser_castle_2','mario_circuit_3'] },
   { name: 'star cup', color: '#9ad0ff',
     tracks: ['koopa_beach_1','choco_island_2','vanilla_lake_1','bowser_castle_3','mario_circuit_4'] },
-  { name: 'special cup', color: '#c0a0ff',
-    tracks: ['donut_plains_3','koopa_beach_2','ghost_valley_3','vanilla_lake_2','rainbow_road'] }
+  { name: 'toba cup', color: '#c0a0ff',
+    tracks: ['donut_plains_3','koopa_beach_2','ghost_valley_3','vanilla_lake_2', 'rainbow_road'] }//
 ];
 const BATTLE_COURSE_IDS = ['battle_course_1','battle_course_2','battle_course_3','battle_course_4'];
-const GP_POINTS = [9, 6, 3, 1, 0, 0, 0, 0];   // 原版积分
+const GP_POINTS = [9, 6, 3, 1, 1, 0, 0, 0];   // 原版积分
 const CC_MULT = [1.75, 2.1, 2.7];
 /* C++ 重写采用上下双屏构图：上半屏赛道、下半屏完整地图。
  * mk-main 的原版布局研究不能直接套到这条渲染管线，否则地图和车手会进入两套坐标系。 */
@@ -338,7 +338,7 @@ const View = {
 /* ---------------- 比赛 ---------------- */
 class Race {
   constructor(trackId, ccIndex, playerChar, opts = {}) {
-    const meta = RACE_TRACKS[trackId] || { name: trackId };
+    const meta = RACE_TRACKS[trackId] || { name: trackId? trackId : 'Toba cup' };
     this.trackId = trackId;
     this.trackName = meta.name;
     this.musicDir = meta.dir || TRACKGEN_MUSIC[meta.theme] || 'mario_circuit_2';   // 音乐目录（生成赛道按主题映射）
@@ -1380,26 +1380,30 @@ class GPStandingsState {
     if (k !== 'accept') return;
     Sound.play('sfx_menuselect');
     const cup = CUPS[this.gp.cupIdx];
-    if (this.gp.raceIdx < 4) {
+    if (this.gp.raceIdx < 0) {
       this.gp.raceIdx++;
       Game.transitionTo(new RaceLoadingState(cup.tracks[this.gp.raceIdx]));
     } else {
-      Game.transitionTo(new CupTrophyState());
+      Game.transitionTo(new CupTrophyState(this.race));
     }
   }
 }
 
 /* ---------------- 杯终奖杯结算 ---------------- */
 class CupTrophyState {
+  constructor(race) {
+    this.race = race;
+    this.gp = Game.gp;
+  }
   init() { Sound.stopEngine(); this.t = 0; }
   update(dt) { this.t += dt; }
   draw(ctx) {
     ctx.fillStyle = '#101028';
     ctx.fillRect(0, 0, 512, 448);
     const gp = Game.gp;
-    const cup = CUPS[gp.cupIdx];
-    const order = [...this._drivers()].sort((a, b) =>
-      gp.points[b.charIdx] - gp.points[a.charIdx]);
+    const cup = CUPS[3];
+    const order = [...this.race.drivers].sort((a, b) =>
+      this.gp.points[b.charIdx] - this.gp.points[a.charIdx]);
     const myPlace = order.findIndex(d => d.isRealPlayer);
     const trophy = ['GOLD TROPHY', 'SILVER TROPHY', 'BRONZE TROPHY', '4TH PLACE'][Math.min(3, Math.max(0, myPlace))];
     const tcol = ['#ffd700', '#c0c0c8', '#cd7f32', '#9898a8'][Math.min(3, Math.max(0, myPlace))];
@@ -1411,7 +1415,7 @@ class CupTrophyState {
       Text.ui(ctx, (i + 1) + '.', 110, y, 16, me ? '#ffe060' : '#c8c8c8');
       Text.ui(ctx, (me ? 'YOU (' + d.char.name + ')' : d.char.name).toUpperCase(),
               150, y, 16, me ? '#ffe060' : '#e8e8ee');
-      Text.ui(ctx, String(gp.points[d.charIdx]) + ' pts', 410, y, 16, '#9ad0ff', 'right');
+      Text.ui(ctx, String(this.gp.points[d.charIdx]) + ' pts', 410, y, 16, '#9ad0ff', 'right');
     });
     if (this.t > 1)
       Text.ui(ctx, 'enter: back to cups', 256, 412, 13, '#aaaaaa', 'center');

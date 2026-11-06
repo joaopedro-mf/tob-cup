@@ -29,19 +29,19 @@ const VEHICLE_TYPES = {
   BALANCED:     { m: 0.11, t: 0.14, s: 0.10200, w: 1.0, convex: false },
   ACCELERATION: { m: 0.15, t: 0.13, s: 0.10175, w: 1.0, convex: false },
   HEAVY:        { m: 0.10, t: 0.13, s: 0.10250, w: 2.0, convex: true  },
-  HANDLING:     { m: 0.12, t: 0.15, s: 0.10150, w: 0.5, convex: false }
+  HANDLING:     { m: 0.15, t: 0.13, s: 0.12150, w: 0.5, convex: false }
 };
 
 // 角色（顺序与原版一致）
 const CHARACTERS = [
   { name: 'mario',   file: 'drivers/mario.png', type: 'BALANCED' },
-  { name: 'princess',file: 'drivers/peach.png', type: 'ACCELERATION' },
-  { name: 'bowser',  file: 'drivers/bowser.png',type: 'HEAVY' },
-  { name: 'koopa',   file: 'drivers/koopa.png', type: 'HANDLING' },
+  { name: 'linda',file: 'drivers/peach.png', type: 'ACCELERATION' },
+  { name: 'banguela',  file: 'drivers/bowser.png',type: 'HEAVY' },
+  { name: 'joao',   file: 'drivers/koopa.png', type: 'HANDLING' },
   { name: 'luigi',   file: 'drivers/luigi.png', type: 'BALANCED' },
-  { name: 'yoshi',   file: 'drivers/yoshi.png', type: 'ACCELERATION' },
-  { name: 'dk',      file: 'drivers/dk.png',    type: 'HEAVY' },
-  { name: 'toad',    file: 'drivers/toad.png',  type: 'HANDLING' }
+  { name: 'bitelin',   file: 'drivers/yoshi.png', type: 'ACCELERATION' },
+  { name: 'cabritin',      file: 'drivers/dk.png',    type: 'HEAVY' },
+  { name: 'baby yoda',    file: 'drivers/toad.png',  type: 'ACCELERATION' }
 ];
 const FAR_VISIONS = [[0,0,0,0,-1,1,1,1],[0,0,1,1,-1,-2,2,2],[1,1,1,-1,-1,-2,2,2]];
 const IMPEDIMENTS = [[128,128,96,96,96,64,64,48],[96,64,64,48,48,48,32,32],[64,64,64,48,48,32,32,16]];
