@@ -19,6 +19,7 @@ I('question_panel', 'objects/floor/question_panel.png');
 I('wall_misc', 'objects/wall/misc.png');
 I('menu_bg', 'menu/start/background.png');
 I('player_selection', 'gui/player_selection.png');
+I('congratulations', 'misc/congratulations.png');
 await Promise.all(jobs);
 Assets.images['menu_bg_slice'] = Assets.slice('menu_bg', { x: 0, y: 0, w: 512, h: 224 });
 Text.init(); Gui.init(); initItemSprites(); M7.prepareSprites(); View.init();

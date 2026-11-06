@@ -74,6 +74,7 @@ async function boot() {
   I('menu_bg', 'menu/start/background.png');
   I('player_selection', 'gui/player_selection.png');
   I('title_logo', 'menu/start/background.png');   // 标题logo区域(6,16,234,76)同图
+  I('congratulations', 'misc/congratulations.png');
 
   // ---- 音频预载（sfx + 菜单音乐；赛道音乐在 Race.init 按需载入） ----
   const A = (n, f) => jobs.push(Assets.loadAudio(n, f, Sound.ctx));
@@ -85,6 +86,10 @@ async function boot() {
   A('music_menu', 'music/menu_title_screen.ogg');
   A('music_playerselect', 'music/menu_player_circuit.ogg');
   A('music_opening', 'music/circuit_opening.ogg');
+  A('music_tournament_win', 'music/tournament_win.ogg');
+  A('music_tournament_lose', 'music/tournament_lose.ogg');
+  A('music_congratulations', 'music/dirigindo.ogg');
+
 
   await Promise.all(jobs);
 

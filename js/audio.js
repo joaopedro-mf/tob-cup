@@ -88,7 +88,10 @@ const Sound = {
   MUSIC_FILES: {
     music_menu: 'music/menu_title_screen.ogg',
     music_playerselect: 'music/menu_player_circuit.ogg',
-    music_opening: 'music/circuit_opening.ogg'
+    music_opening: 'music/circuit_opening.ogg',
+    music_tournament_win: 'music/tournament_win.ogg',
+    music_tournament_lose: 'music/tournament_lose.ogg',
+    music_congratulations: 'music/dirigindo.ogg'
   },
   playMusic(name) {
     this.init();

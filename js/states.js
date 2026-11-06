@@ -625,7 +625,7 @@ class BootState {
     if (!this._done && this.t >= 206 / 60) {   // 126f黑A + 40f INIT + 40f黑B
       this._done = true;
       Game.transitionTo(new TitleState());
-      Sound.playMusic('music_menu');
+      Sound.playMusic('music_congratulations');
     }
   }
   draw(ctx) {
@@ -665,7 +665,7 @@ class TitleState {
     // 从attract演示回到标题：恢复菜单主题（正常开机路径由BootState起过音乐，不重复）
     if (Game.mode === 'attract') {
       Game.mode = null;
-      Sound.playMusic('music_menu');
+      Sound.playMusic('music_congratulations');
     }
   }
   update(dt) {
@@ -1213,7 +1213,7 @@ class RaceStartState {
           Sound.playMusic('music_playerselect');
           Game.setState(new BattleState(this.race));
         } else {
-          Sound.playMusic('music_circuit');
+          Sound.playMusic('music_congratulations');
           Game.setState(new RaceState(this.race));
         }
       }
@@ -1222,7 +1222,7 @@ class RaceStartState {
         console.error('[lights]', e);
         this.started = true;
         if (this.race.isBattle) { Sound.playMusic('music_playerselect'); Game.setState(new BattleState(this.race)); }
-        else { Sound.playMusic('music_circuit'); Game.setState(new RaceState(this.race)); }
+        else { Sound.playMusic('music_congratulations'); Game.setState(new RaceState(this.race)); }
       }
     }
   }
@@ -1259,7 +1259,11 @@ class RaceStartState {
 
 class RaceState {
   constructor(race) { this.race = race; }
-  init() {}
+  init() {
+    //Sound.stopMusic();
+    //Sound.playMusic('music_congratulations');
+    //Sound.startEngine();
+  }
   update(dt) {
     const p = this.race.player;
     const input = {
@@ -1380,7 +1384,7 @@ class GPStandingsState {
     if (k !== 'accept') return;
     Sound.play('sfx_menuselect');
     const cup = CUPS[this.gp.cupIdx];
-    if (this.gp.raceIdx < 0) {
+    if (this.gp.raceIdx < 4) {
       this.gp.raceIdx++;
       Game.transitionTo(new RaceLoadingState(cup.tracks[this.gp.raceIdx]));
     } else {
@@ -1400,11 +1404,12 @@ class CupTrophyState {
   draw(ctx) {
     ctx.fillStyle = '#101028';
     ctx.fillRect(0, 0, 512, 448);
-    const gp = Game.gp;
-    const cup = CUPS[3];
-    const order = [...this.race.drivers].sort((a, b) =>
-      this.gp.points[b.charIdx] - this.gp.points[a.charIdx]);
-    const myPlace = order.findIndex(d => d.isRealPlayer);
+    const gp = this.gp || Game.gp || { cupIdx: 3, points: new Array(8).fill(0) };
+    const cup = CUPS[gp.cupIdx] || CUPS[3];
+    const drivers = (this.race && this.race.drivers) ? this.race.drivers : this._drivers();
+    const order = [...drivers].sort((a, b) =>
+      (gp.points[b.charIdx] || 0) - (gp.points[a.charIdx] || 0));
+    const myPlace = Math.max(0, order.findIndex(d => d.isRealPlayer));
     const trophy = ['GOLD TROPHY', 'SILVER TROPHY', 'BRONZE TROPHY', '4TH PLACE'][Math.min(3, Math.max(0, myPlace))];
     const tcol = ['#ffd700', '#c0c0c8', '#cd7f32', '#9898a8'][Math.min(3, Math.max(0, myPlace))];
     Text.ui(ctx, cup.name.toUpperCase() + ' RESULT', 256, 56, 24, cup.color, 'center');
@@ -1415,16 +1420,207 @@ class CupTrophyState {
       Text.ui(ctx, (i + 1) + '.', 110, y, 16, me ? '#ffe060' : '#c8c8c8');
       Text.ui(ctx, (me ? 'YOU (' + d.char.name + ')' : d.char.name).toUpperCase(),
               150, y, 16, me ? '#ffe060' : '#e8e8ee');
-      Text.ui(ctx, String(this.gp.points[d.charIdx]) + ' pts', 410, y, 16, '#9ad0ff', 'right');
+      Text.ui(ctx, String(gp.points[d.charIdx] || 0) + ' pts', 410, y, 16, '#9ad0ff', 'right');
     });
     if (this.t > 1)
-      Text.ui(ctx, 'enter: back to cups', 256, 412, 13, '#aaaaaa', 'center');
+      Text.ui(ctx, 'enter: award ceremony', 256, 412, 13, '#aaaaaa', 'center');
   }
   _drivers() { return this._cached || (this._cached = CHARACTERS.map((c, i) => ({ charIdx: i, char: c, name: c.name, balloons: 3, hitsDealt: 0, isRealPlayer: i === Game.playerChar }))); }
   key(k) {
     if (k === 'accept' && this.t > 1) {
+      Sound.play('sfx_menuselect');
+      Game.transitionTo(new CongratulationsState(this.race, this.gp));
+    }
+  }
+}
+
+/* ---------------- 颁奖典礼（congratulations.png） ---------------- */
+class CongratulationsState {
+  constructor(race, gp) {
+    this.race = race;
+    this.gp = gp || Game.gp || { cupIdx: 3, points: new Array(8).fill(0) };
+  }
+  _drivers() {
+    return this._cached || (this._cached = CHARACTERS.map((c, i) => ({
+      charIdx: i, char: c, name: c.name, isRealPlayer: i === Game.playerChar
+    })));
+  }
+  init() {
+    Sound.stopEngine();
+    Sound.stopMusic();
+    this.t = 0;
+    const drivers = (this.race && this.race.drivers) ? this.race.drivers : this._drivers();
+    this.order = [...drivers].sort((a, b) =>
+      (this.gp.points[b.charIdx] || 0) - (this.gp.points[a.charIdx] || 0));
+    this.myPlace = Math.max(0, this.order.findIndex(d => d.isRealPlayer));
+    this.isPodium = this.myPlace <= 2;
+    this.anims = CHARACTERS.map(c => new Animator(c.file.replace('drivers/', '')));
+    // 彩带粒子（来自 congratulations.png 内的彩屑切片）
+    const confettiRects = [
+      { x: 67, y: 32, w: 7, h: 4 }, { x: 75, y: 32, w: 6, h: 3 },
+      { x: 82, y: 32, w: 6, h: 4 }, { x: 89, y: 32, w: 4, h: 6 },
+      { x: 94, y: 32, w: 5, h: 5 }, { x: 100, y: 32, w: 5, h: 5 },
+      { x: 106, y: 32, w: 7, h: 6 }, { x: 53, y: 40, w: 5, h: 5 },
+      { x: 59, y: 40, w: 7, h: 5 }
+    ];
+    this.confetti = Array.from({ length: 28 }, (_, i) => ({
+      x: (i * 73) % 512,
+      y: -((i * 47) % 300),
+      vy: 38 + (i % 5) * 14,
+      vx: (i % 2 === 0 ? 1 : -1) * (10 + (i % 4) * 5),
+      phase: i * 0.7,
+      rect: confettiRects[i % confettiRects.length]
+    }));
+    Sound.playMusic(this.isPodium ? 'music_tournament_win' : 'music_tournament_lose');
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.isPodium && this.confetti) {
+      for (const p of this.confetti) {
+        p.y += p.vy * dt;
+        p.x += Math.sin(this.t * 3 + p.phase) * p.vx * dt;
+        if (p.y > 460) {
+          p.y = -16;
+          p.x = (p.x + 137) % 512;
+        }
+      }
+    }
+  }
+  draw(ctx) {
+    const sheet = Assets.img('congratulations');
+    // 1. 典礼背景 (152, 32, 256, 224) -> 全屏 512x448 (2x)
+    if (sheet) {
+      ctx.drawImage(sheet, 152, 32, 256, 224, 0, 0, 512, 448);
+    } else {
+      ctx.fillStyle = '#d7f9fe';
+      ctx.fillRect(0, 0, 512, 448);
+    }
+
+    // 2. 飞鱼气球 Cheep-Cheep + 缎带横幅（从空中缓缓降落并上下浮动）
+    if (sheet) {
+      const descend = Math.min(1, this.t / 2.2);
+      const bob = Math.sin(this.t * 2.6) * 6;
+      const fishX = 34;
+      const fishY = -160 + descend * 252 + bob;
+      // 缎带 (65, 2, 62, 22) 挂在飞鱼上方
+      ctx.drawImage(sheet, 65, 2, 62, 22, fishX + 12, fishY - 34, 62 * 1.6, 22 * 1.6);
+      // 飞鱼两帧动画 (2, 51, 90, 95) / (2, 148, 93, 95)，水平镜像朝向领奖台
+      const fishFrame = ((this.t * 4) | 0) % 2;
+      const fw = fishFrame === 0 ? 90 : 93;
+      const fySrc = fishFrame === 0 ? 51 : 148;
+      ctx.save();
+      ctx.translate(fishX + fw * 1.35, fishY);
+      ctx.scale(-1, 1);
+      ctx.drawImage(sheet, 2, fySrc, fw, 95, 0, 0, fw * 1.35, 95 * 1.35);
+      ctx.restore();
+    }
+
+    // 3. 领奖台 (417, 153, 96, 30) -> 2x = 192x60，置于右侧路面
+    const podX = 216, podY = 344;
+    if (sheet) {
+      ctx.drawImage(sheet, 417, 153, 96, 30, podX, podY, 192, 60);
+    }
+
+    // 4. 前三名车手入场并登上领奖台 1 / 2 / 3 台阶
+    // 台阶中心坐标（相对 podX, podY）：第1名中台(dx=48,dy=3)，第2名左台(dx=16,dy=10)，第3名右台(dx=80,dy=17)
+    const steps = [
+      { x: podX + 48 * 2, y: podY + 3 * 2, rank: 0 },   // 1st
+      { x: podX + 16 * 2, y: podY + 10 * 2, rank: 1 },  // 2nd
+      { x: podX + 80 * 2, y: podY + 17 * 2, rank: 2 }   // 3rd
+    ];
+    const enterProg = Math.min(1, this.t / 1.2);
+    // 先画第2、3名，再画第1名以保证遮挡自然
+    for (const st of [steps[1], steps[2], steps[0]]) {
+      const d = this.order[st.rank];
+      if (!d) continue;
+      const anim = this.anims[d.charIdx];
+      if (!anim) continue;
+      // 入场阶段从左侧道路驶入，到位后正对镜头欢呼跳跃
+      const curX = enterProg < 1 ? (-40 + (st.x + 40) * enterProg) : st.x;
+      const curY = enterProg < 1 ? (396 + (st.y - 396) * enterProg) : st.y;
+      const jump = (enterProg >= 1 && (st.rank === 0 || d.isRealPlayer))
+        ? Math.abs(Math.sin((this.t - 1.2) * 5.5 + st.rank)) * 8
+        : 0;
+      const kartImg = enterProg < 1 ? anim.driving[7] : anim.driving[11];
+      ctx.drawImage(kartImg, curX - 32, curY - 64 - jump, 64, 64);
+    }
+
+    // 若玩家未进前三（4th~8th），在左侧路面停靠旁观
+    if (!this.isPodium) {
+      const me = this.order[this.myPlace];
+      if (me && this.anims[me.charIdx]) {
+        const sadImg = this.anims[me.charIdx].others[4] || this.anims[me.charIdx].driving[0];
+        ctx.drawImage(sadImg, 64, 344, 64, 64);
+      }
+    }
+
+    // 5. 奖杯动画（金/银/铜 3列 × 3帧旋转闪烁）
+    if (sheet && this.t > 1.2) {
+      const trophyCol = this.isPodium ? this.myPlace : 0; // 0=金, 1=银, 2=铜
+      const trophyRow = ((this.t * 6) | 0) % 3;
+      const targetStep = steps[trophyCol];
+      const dropProg = Math.min(1, (this.t - 1.2) / 1.0);
+      const tx = targetStep.x - 18;
+      const ty = 150 + (targetStep.y - 104 - 150) * dropProg + Math.sin(this.t * 4) * 3;
+      ctx.drawImage(sheet, 418 + trophyCol * 19, 193 + trophyRow * 17, 16, 16, tx, ty, 36, 36);
+    }
+
+    // 6. 漫天彩带粒子（前三名获胜时）
+    if (sheet && this.isPodium && this.confetti) {
+      for (const p of this.confetti) {
+        const r = p.rect;
+        ctx.drawImage(sheet, r.x, r.y, r.w, r.h, p.x, p.y, r.w * 2, r.h * 2);
+      }
+    }
+
+    // 7. 顶部彩色闪烁 CONGRATULATIONS + 排名数字 1/2/3 + 杯赛结果文案
+    const cup = CUPS[this.gp.cupIdx] || CUPS[3];
+    const colorRow = ((this.t * 10) | 0) % 8;
+    if (sheet && this.isPodium) {
+      // CONGRATULATIONS 横幅 (410, 2 + colorRow*15, 141, 14) -> 2x = 282x28
+      const bx = 256 - 156;
+      const by = 22;
+      ctx.drawImage(sheet, 410, 2 + colorRow * 15, 141, 14, bx, by, 282, 28);
+      // 对应名次数字 1 / 2 / 3
+      const digitSpecs = [
+        { x: 553, w: 10 },
+        { x: 564, w: 12 },
+        { x: 577, w: 12 }
+      ];
+      const ds = digitSpecs[this.myPlace];
+      ctx.drawImage(sheet, ds.x, 2 + colorRow * 16, ds.w, 15, bx + 290, by - 1, ds.w * 2, 30);
+    } else {
+      Text.ui(ctx, 'TOURNAMENT OVER', 256, 22, 26, '#ff9070', 'center');
+    }
+
+    // 杯赛名与获奖车手字幕框
+    const trophyNames = ['GOLD TROPHY CHAMPION!', 'SILVER TROPHY WINNER!', 'BRONZE TROPHY WINNER!'];
+    const trophyColors = ['#ffd700', '#e0e4f0', '#cd7f32'];
+    const playerDriver = this.order[this.myPlace] || this.order[0];
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(188, 60, 308, 76);
+    Text.ui(ctx, cup.name.toUpperCase(), 342, 66, 18, cup.color, 'center');
+    if (this.isPodium) {
+      Text.ui(ctx, trophyNames[this.myPlace], 342, 90, 15, trophyColors[this.myPlace], 'center');
+      Text.ui(ctx, 'DRIVER: ' + playerDriver.char.name.toUpperCase() + ' (' + (this.gp.points[playerDriver.charIdx] || 0) + ' PTS)',
+              342, 114, 13, '#ffffff', 'center');
+    } else {
+      Text.ui(ctx, (this.myPlace + 1) + 'TH PLACE - TRY AGAIN!', 342, 92, 15, '#cccccc', 'center');
+      Text.ui(ctx, '1ST: ' + this.order[0].char.name.toUpperCase(), 342, 114, 13, '#ffe060', 'center');
+    }
+
+    if (this.t > 1.5) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(136, 414, 240, 24);
+      Text.ui(ctx, 'enter: back to cups', 256, 419, 13, '#ffe060', 'center');
+    }
+  }
+  key(k) {
+    if ((k === 'accept' || k === 'back') && this.t > 1.5) {
+      Sound.play('sfx_menuselect');
       Game.gp = null;
       Sound.stopMusic();
+      Sound.playMusic('music_playerselect');
       Game.transitionTo(new CupSelectState());
     }
   }
